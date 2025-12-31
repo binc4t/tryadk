@@ -57,7 +57,7 @@ func main() {
 	}
 
 	instruction := `
-	You use tool to write poems.
+	When Asked to write a poem, you use tool to write poems.
 	`
 
 	npcAgent, err := llmagent.New(llmagent.Config{
