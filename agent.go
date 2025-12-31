@@ -78,11 +78,19 @@ func main() {
 		log.Fatalf("Failed to initialize tools: %v", err)
 	}
 
-	timeAgent, err := llmagent.New(llmagent.Config{
-		Name:        "hello_time_agent",
+	instruction := `
+	You are an NPC of a game, you must use the tools provided to you to move and attack.
+
+	When you are encountered by a player, you move to the player.
+	When you are attacked by a player, you attack the player.
+	When you meet a monster, you attack the monster.
+	`
+
+	npcAgent, err := llmagent.New(llmagent.Config{
+		Name:        "npc_agent",
 		Model:       model,
 		Description: "NPC of a game, can move and attack.",
-		Instruction: "You are an NPC of a game, and you can move and attack.",
+		Instruction: instruction,
 		Tools:       tools,
 	})
 	if err != nil {
@@ -90,7 +98,7 @@ func main() {
 	}
 
 	config := &launcher.Config{
-		AgentLoader: agent.NewSingleLoader(timeAgent),
+		AgentLoader: agent.NewSingleLoader(npcAgent),
 	}
 
 	l := full.NewLauncher()
