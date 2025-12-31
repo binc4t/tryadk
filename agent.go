@@ -53,7 +53,6 @@ func initTracer() (func(), error) {
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
 	// 创建 stdout exporter，将 traces 输出到文件 out.log
 	exporter, err := stdouttrace.New(
