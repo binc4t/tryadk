@@ -6,6 +6,12 @@ import (
 	"os"
 	"strings"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/propagation"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/cmd/launcher"
@@ -41,8 +47,59 @@ func initTools() ([]tool.Tool, error) {
 	return []tool.Tool{poemTool}, nil
 }
 
+// initTracer 初始化 OpenTelemetry tracer，用于观察模型的输入和输出
+func initTracer() (func(), error) {
+	// 创建 stdout exporter，将 traces 输出到标准输出
+	exporter, err := stdouttrace.New(
+		stdouttrace.WithPrettyPrint(),     // 美化输出格式
+		stdouttrace.WithWriter(os.Stderr), // 输出到 stderr，避免与正常输出混淆
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建 resource，标识服务信息
+	res, err := resource.New(context.Background(),
+		resource.WithAttributes(
+			semconv.ServiceName("poet_agent"),
+			semconv.ServiceVersion("1.0.0"),
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建 tracer provider
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithBatcher(exporter),
+		sdktrace.WithResource(res),
+		sdktrace.WithSampler(sdktrace.AlwaysSample()), // 采样所有 traces
+	)
+
+	// 设置全局 tracer provider
+	otel.SetTracerProvider(tp)
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
+		propagation.TraceContext{},
+		propagation.Baggage{},
+	))
+
+	// 返回清理函数
+	return func() {
+		if err := tp.Shutdown(context.Background()); err != nil {
+			log.Printf("Error shutting down tracer provider: %v", err)
+		}
+	}, nil
+}
+
 func main() {
 	ctx := context.Background()
+
+	// 初始化 telemetry
+	shutdown, err := initTracer()
+	if err != nil {
+		log.Fatalf("Failed to initialize tracer: %v", err)
+	}
+	defer shutdown()
 
 	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
