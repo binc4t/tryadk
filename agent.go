@@ -11,11 +11,50 @@ import (
 	"google.golang.org/adk/cmd/launcher/full"
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/tool"
+	"google.golang.org/adk/tool/functiontool"
 	"google.golang.org/adk/tool/geminitool"
 	"google.golang.org/genai"
 )
 
+type attackArgs struct {
+	Target string `json:"target"`
+}
+
+type attackResults struct {
+	Result string `json:"result"`
+}
+
 func main() {
+	attackFunc := func(ctx tool.Context, args string) (string, error) {
+		return "Attacking " + args, nil
+	}
+
+	attackTool, err := functiontool.New(
+		functiontool.Config{
+			Name:        "attack",
+			Description: "Attack a target",
+		},
+		attackFunc,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create attack tool: %v", err)
+	}
+
+	moveFunc := func(ctx tool.Context, direction string) (string, error) {
+		return "Moving " + direction, nil
+	}
+
+	moveTool, err := functiontool.New(
+		functiontool.Config{
+			Name:        "move",
+			Description: "Move in a direction",
+		},
+		moveFunc,
+	)
+	if err != nil {
+		log.Fatalf("Failed to create move tool: %v", err)
+	}
+
 	ctx := context.Background()
 
 	model, err := gemini.NewModel(ctx, "gemini-3-flash-preview", &genai.ClientConfig{
@@ -28,10 +67,12 @@ func main() {
 	timeAgent, err := llmagent.New(llmagent.Config{
 		Name:        "hello_time_agent",
 		Model:       model,
-		Description: "Tells the current time in a specified city.",
-		Instruction: "You are a helpful assistant that tells the current time in a city.",
+		Description: "NPC of a game, can move and attack.",
+		Instruction: "You are an NPC of a game, and you can move and attack.",
 		Tools: []tool.Tool{
 			geminitool.GoogleSearch{},
+			attackTool,
+			moveTool,
 		},
 	})
 	if err != nil {
