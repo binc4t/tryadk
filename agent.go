@@ -12,7 +12,6 @@ import (
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/functiontool"
-	"google.golang.org/adk/tool/geminitool"
 	"google.golang.org/genai"
 )
 
@@ -24,11 +23,18 @@ type attackResults struct {
 	Result string `json:"result"`
 }
 
-func main() {
-	attackFunc := func(ctx tool.Context, args string) (string, error) {
-		return "Attacking " + args, nil
-	}
+type moveArgs struct {
+	Direction string `json:"direction"`
+}
 
+type moveResults struct {
+	Result string `json:"result"`
+}
+
+func initTools() ([]tool.Tool, error) {
+	attackFunc := func(ctx tool.Context, args attackArgs) (attackResults, error) {
+		return attackResults{Result: "Attacking " + args.Target}, nil
+	}
 	attackTool, err := functiontool.New(
 		functiontool.Config{
 			Name:        "attack",
@@ -37,13 +43,12 @@ func main() {
 		attackFunc,
 	)
 	if err != nil {
-		log.Fatalf("Failed to create attack tool: %v", err)
+		return nil, err
 	}
 
-	moveFunc := func(ctx tool.Context, direction string) (string, error) {
-		return "Moving " + direction, nil
+	moveFunc := func(ctx tool.Context, args moveArgs) (moveResults, error) {
+		return moveResults{Result: "Moving " + args.Direction}, nil
 	}
-
 	moveTool, err := functiontool.New(
 		functiontool.Config{
 			Name:        "move",
@@ -52,9 +57,13 @@ func main() {
 		moveFunc,
 	)
 	if err != nil {
-		log.Fatalf("Failed to create move tool: %v", err)
+		return nil, err
 	}
 
+	return []tool.Tool{attackTool, moveTool}, nil
+}
+
+func main() {
 	ctx := context.Background()
 
 	model, err := gemini.NewModel(ctx, "gemini-3-flash-preview", &genai.ClientConfig{
@@ -64,16 +73,17 @@ func main() {
 		log.Fatalf("Failed to create model: %v", err)
 	}
 
+	tools, err := initTools()
+	if err != nil {
+		log.Fatalf("Failed to initialize tools: %v", err)
+	}
+
 	timeAgent, err := llmagent.New(llmagent.Config{
 		Name:        "hello_time_agent",
 		Model:       model,
 		Description: "NPC of a game, can move and attack.",
 		Instruction: "You are an NPC of a game, and you can move and attack.",
-		Tools: []tool.Tool{
-			geminitool.GoogleSearch{},
-			attackTool,
-			moveTool,
-		},
+		Tools:       tools,
 	})
 	if err != nil {
 		log.Fatalf("Failed to create agent: %v", err)
