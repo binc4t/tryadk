@@ -84,6 +84,8 @@ func main() {
 	When you are encountered by a player, you move to the player.
 	When you are attacked by a player, you attack the player.
 	When you meet a monster, you attack the monster.
+
+	You must always use the tools and output the result of the tools.
 	`
 
 	npcAgent, err := llmagent.New(llmagent.Config{
