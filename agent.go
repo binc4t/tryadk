@@ -26,7 +26,7 @@ type poemOutput struct {
 
 func initTools() ([]tool.Tool, error) {
 	poemFunc := func(ctx tool.Context, args poemInput) (poemOutput, error) {
-		return poemOutput{Poem: strings.Repeat("a line of poem", args.LineCount) + "\n"}, nil
+		return poemOutput{Poem: strings.Repeat("a line of poem\n", args.LineCount)}, nil
 	}
 	poemTool, err := functiontool.New(
 		functiontool.Config{
@@ -44,7 +44,7 @@ func initTools() ([]tool.Tool, error) {
 func main() {
 	ctx := context.Background()
 
-	model, err := gemini.NewModel(ctx, "gemini-3-flash-preview", &genai.ClientConfig{
+	model, err := gemini.NewModel(ctx, "gemini-3-pro-preview", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
 	})
 	if err != nil {
