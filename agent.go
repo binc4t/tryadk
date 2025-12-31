@@ -31,7 +31,7 @@ func initTools() ([]tool.Tool, error) {
 	poemTool, err := functiontool.New(
 		functiontool.Config{
 			Name:        "poem",
-			Description: "Write a poem",
+			Description: "Return a poem",
 		},
 		poemFunc,
 	)
@@ -57,7 +57,7 @@ func main() {
 	}
 
 	instruction := `
-	When Asked to write a poem, you use tool to write poems.
+	When Asked to write a poem, you MUST use tool to write poems.
 	`
 
 	npcAgent, err := llmagent.New(llmagent.Config{
