@@ -49,10 +49,16 @@ func initTools() ([]tool.Tool, error) {
 
 // initTracer 初始化 OpenTelemetry tracer，用于观察模型的输入和输出
 func initTracer() (func(), error) {
-	// 创建 stdout exporter，将 traces 输出到标准输出
+	f, err := os.Create("out.log")
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	// 创建 stdout exporter，将 traces 输出到文件 out.log
 	exporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint(),     // 美化输出格式
-		stdouttrace.WithWriter(os.Stderr), // 输出到 stderr，避免与正常输出混淆
+		stdouttrace.WithPrettyPrint(), // 美化输出格式
+		stdouttrace.WithWriter(f),     // 输出到文件 out.log
 	)
 	if err != nil {
 		return nil, err
